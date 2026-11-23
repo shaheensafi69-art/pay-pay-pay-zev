@@ -97,7 +97,7 @@ export default function StripeExpressCheckout({
             paypal: 'buynow',
             klarna: 'pay',
           },
-          buttonHeight: 48,
+          buttonHeight: 40,
           layout: {
             maxColumns: 2,
             maxRows: 1,
@@ -200,7 +200,7 @@ export default function StripeExpressCheckout({
       } catch (err: any) {
         if (isMounted) {
           setIsLoading(false);
-          setErrorMessage(err.message || 'Stripe initialization failed.');
+          setErrorMessage(err.message || 'Payment service initialization failed.');
         }
       }
     }
@@ -245,7 +245,7 @@ export default function StripeExpressCheckout({
           </div>
           <div className="zev-express-security-badge">
             <ShieldCheck style={{ width: 14, height: 14, color: '#10B981' }} />
-            <span>Stripe Verified</span>
+            <span>256-Bit SSL Encrypted</span>
           </div>
         </div>
 

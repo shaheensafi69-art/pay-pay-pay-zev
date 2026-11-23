@@ -114,7 +114,7 @@ function ZevPayContent() {
   const [selectedTier, setSelectedTier] = useState<CoinTier>(DEFAULT_TIERS[2]);
   const [isCustomAmount, setIsCustomAmount] = useState(false);
   const [customCoins, setCustomCoins] = useState(2500);
-  const [selectedPayment, setSelectedPayment] = useState<'stripe' | 'nowpayments' | 'paypal'>('stripe');
+  const [selectedPayment, setSelectedPayment] = useState<string>('card');
 
   // Checkout Processing
   const [isProcessing, setIsProcessing] = useState(false);
@@ -474,6 +474,20 @@ function ZevPayContent() {
     await supabase.auth.signOut();
     setAuthUser(null);
     setAuthProfile(null);
+  }
+
+  function getPaymentLabel(id: string) {
+    switch (id) {
+      case 'apple_pay': return 'Apple Pay';
+      case 'google_pay': return 'Google Pay';
+      case 'samsung_pay': return 'Samsung Pay';
+      case 'paypal': return 'PayPal';
+      case 'crypto':
+      case 'nowpayments': return 'Crypto';
+      case 'card':
+      case 'stripe':
+      default: return 'Card';
+    }
   }
 
   // Handle Checkout Submission
@@ -1124,75 +1138,155 @@ function ZevPayContent() {
 
                 <div className="zev-section-title">
                   <CreditCard style={{ width: 15, height: 15, color: '#536DFE' }} />
-                  <span>Select Payment Gateway</span>
+                  <span>Select Payment Method</span>
                 </div>
 
-                <div className="zev-gateways-grid">
-                  {/* Stripe */}
-                  <div
-                    onClick={() => setSelectedPayment('stripe')}
-                    className={`zev-gateway-card ${selectedPayment === 'stripe' ? 'selected' : ''}`}
-                  >
-                    <div className="zev-gateway-left">
-                      <div className="zev-gateway-icon-box" style={{ backgroundColor: '#EEF2FF', color: '#6366F1' }}>
-                        <CreditCard style={{ width: 20, height: 20 }} />
-                      </div>
-                      <div>
-                        <div className="zev-gateway-name">
-                          <span>Credit / Debit Card</span>
-                          <span className="zev-instant-badge">INSTANT</span>
+                {/* Compact Branded Payment Buttons Grid */}
+                <div className="zev-compact-payment-grid">
+                  {[
+                    {
+                      id: 'apple_pay',
+                      name: 'Apple Pay',
+                      sub: '1-Tap Apple Wallet',
+                      badge: '1-TAP',
+                      bg: '#000000',
+                      color: '#FFFFFF',
+                      border: '1.5px solid rgba(255, 255, 255, 0.2)',
+                      isLight: false,
+                      icon: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#FFFFFF' }}>
+                          <svg width="15" height="15" viewBox="0 0 170 170" fill="currentColor">
+                            <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.07-7.86-7.94-12.49-14.6-5.99-8.68-10.74-18.73-14.25-30.13-3.51-11.41-5.27-22.39-5.27-32.96 0-16.09 4.18-29.43 12.54-40.03 8.36-10.6 18.89-16.03 31.6-16.3 4.88 0 10.15 1.25 15.82 3.75 5.66 2.5 9.73 3.81 12.21 3.93 2.13-.22 6.33-1.61 12.6-4.16 6.28-2.56 11.66-3.72 16.14-3.5 11.96.65 21.6 4.9 28.93 12.74-10.45 6.3-15.61 15.11-15.48 26.43.13 8.8 3.51 16.18 10.14 22.13 6.63 5.95 14.54 9.4 23.73 10.36-2.18 6.74-4.89 13.59-8.14 20.55zM119.22 31.84c0-7.39 2.66-14.38 7.98-20.97 5.32-6.59 11.93-10.66 19.83-12.21.22 1.3.33 2.45.33 3.45 0 7.39-2.8 14.61-8.39 21.66-5.59 7.05-12.42 11.19-20.49 12.42-.43-1.41-.65-2.76-.65-4.35z"/>
+                          </svg>
+                          <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: -0.2 }}>Pay</span>
                         </div>
-                        <div className="zev-gateway-sub">Visa, Mastercard, American Express via Stripe</div>
-                      </div>
-                    </div>
-                    <div className={`zev-gateway-radio ${selectedPayment === 'stripe' ? 'selected' : ''}`}>
-                      {selectedPayment === 'stripe' && <Check style={{ width: 12, height: 12 }} />}
-                    </div>
-                  </div>
+                      ),
+                    },
+                    {
+                      id: 'google_pay',
+                      name: 'Google Pay',
+                      sub: 'Fast Android Pay',
+                      badge: 'INSTANT',
+                      bg: '#FFFFFF',
+                      color: '#1F1F1F',
+                      border: '1.5px solid #CBD5E1',
+                      isLight: true,
+                      icon: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <svg width="17" height="17" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                          </svg>
+                          <span style={{ fontSize: 13, fontWeight: 900, color: '#3C4043', letterSpacing: -0.2 }}>Pay</span>
+                        </div>
+                      ),
+                    },
+                    {
+                      id: 'samsung_pay',
+                      name: 'Samsung Pay',
+                      sub: 'Galaxy Wallet',
+                      badge: 'GALAXY',
+                      bg: 'linear-gradient(135deg, #034EA2 0%, #002B66 100%)',
+                      color: '#FFFFFF',
+                      border: '1.5px solid rgba(255, 255, 255, 0.25)',
+                      isLight: false,
+                      icon: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: -0.3, color: '#FFFFFF' }}>SAMSUNG</span>
+                          <span style={{ fontSize: 11, fontWeight: 900, color: '#00D4FF' }}>Pay</span>
+                        </div>
+                      ),
+                    },
+                    {
+                      id: 'card',
+                      name: 'Debit & Credit Card',
+                      sub: 'Visa, Mastercard, Amex',
+                      badge: 'INSTANT',
+                      bg: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                      color: '#FFFFFF',
+                      border: '1.5px solid rgba(255, 255, 255, 0.2)',
+                      isLight: false,
+                      icon: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <CreditCard style={{ width: 16, height: 16, color: '#00D4FF' }} />
+                          <div style={{ display: 'flex', gap: 2 }}>
+                            <span style={{ fontSize: 8.5, fontWeight: 900, background: '#1A1F71', color: '#FFFFFF', padding: '1px 3px', borderRadius: 2 }}>VISA</span>
+                            <span style={{ fontSize: 8, fontWeight: 900, background: '#EB001B', color: '#F79E1B', padding: '1px 3px', borderRadius: 2 }}>MC</span>
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      id: 'paypal',
+                      name: 'PayPal',
+                      sub: 'Balance, Bank, Pay in 4',
+                      badge: 'OFFICIAL',
+                      bg: 'linear-gradient(135deg, #003087 0%, #0070BA 100%)',
+                      color: '#FFFFFF',
+                      border: '1.5px solid rgba(255, 255, 255, 0.25)',
+                      isLight: false,
+                      icon: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                            <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 2.45a.855.855 0 0 1 .843-.722h6.76c3.21 0 5.485 1.554 5.093 5.02-.387 3.415-2.673 5.422-5.753 5.422H9.28l-1.36 7.625a.855.855 0 0 1-.844.542z" fill="#00D4FF"/>
+                            <path d="M9.28 12.17h2.607c3.08 0 5.366-2.007 5.753-5.422.392-3.466-1.883-5.02-5.093-5.02H5.787a.855.855 0 0 0-.843.722L2.73 17.5a.641.641 0 0 0 .633.74h3.693l1.38-7.785a.855.855 0 0 1 .844-.285z" fill="#FFFFFF"/>
+                          </svg>
+                          <span style={{ fontSize: 13, fontWeight: 900, color: '#FFFFFF', letterSpacing: -0.3 }}>PayPal</span>
+                        </div>
+                      ),
+                    },
+                    {
+                      id: 'crypto',
+                      name: 'Crypto Currency',
+                      sub: 'USDT, BTC, TON, ETH & 100+',
+                      badge: 'WEB3',
+                      bg: 'linear-gradient(135deg, #061822 0%, #0B2535 100%)',
+                      color: '#FFFFFF',
+                      border: '1.5px solid rgba(16, 185, 129, 0.4)',
+                      isLight: false,
+                      icon: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <span style={{ fontSize: 9, fontWeight: 900, background: '#26A17B', color: '#FFFFFF', padding: '1px 3px', borderRadius: 2 }}>USDT</span>
+                          <span style={{ fontSize: 9, fontWeight: 900, background: '#F7931A', color: '#FFFFFF', padding: '1px 3px', borderRadius: 2 }}>BTC</span>
+                          <span style={{ fontSize: 9, fontWeight: 900, background: '#0098EA', color: '#FFFFFF', padding: '1px 3px', borderRadius: 2 }}>TON</span>
+                        </div>
+                      ),
+                    },
+                  ].map((method) => {
+                    const isSelected = selectedPayment === method.id;
+                    return (
+                      <div
+                        key={method.id}
+                        onClick={() => setSelectedPayment(method.id)}
+                        className={`zev-compact-pay-btn ${isSelected ? 'selected' : ''}`}
+                        style={{
+                          background: method.bg,
+                          color: method.color,
+                          borderColor: isSelected ? '#00D4FF' : (method.border as string),
+                        }}
+                      >
+                        <div className="zev-compact-pay-left">
+                          <div className="zev-compact-pay-icon">
+                            {method.icon}
+                          </div>
+                          <div className="zev-compact-pay-details">
+                            <span className="zev-compact-pay-name" style={{ color: method.color }}>
+                              {method.name}
+                            </span>
+                            <span className="zev-compact-pay-sub" style={{ color: method.color }}>
+                              {method.sub}
+                            </span>
+                          </div>
+                        </div>
 
-                  {/* NOWPayments (Crypto) */}
-                  <div
-                    onClick={() => setSelectedPayment('nowpayments')}
-                    className={`zev-gateway-card ${selectedPayment === 'nowpayments' ? 'selected' : ''}`}
-                  >
-                    <div className="zev-gateway-left">
-                      <div className="zev-gateway-icon-box" style={{ backgroundColor: '#FFFBEB', color: '#F59E0B' }}>
-                        <Wallet style={{ width: 20, height: 20 }} />
-                      </div>
-                      <div>
-                        <div className="zev-gateway-name">
-                          <span>Crypto Currency</span>
-                          <span className="zev-instant-badge" style={{ background: '#FEF3C7', color: '#B45309' }}>NOWPAYMENTS</span>
+                        <div className={`zev-compact-pay-radio ${method.isLight ? 'light-theme' : ''} ${isSelected ? (method.isLight ? 'selected-light' : 'selected') : ''}`}>
+                          {isSelected && <Check style={{ width: 11, height: 11, strokeWidth: 3 }} />}
                         </div>
-                        <div className="zev-gateway-sub">BTC, USDT (TRC20/ERC20), ETH, TON, SOL & 150+ Coins</div>
                       </div>
-                    </div>
-                    <div className={`zev-gateway-radio ${selectedPayment === 'nowpayments' ? 'selected' : ''}`}>
-                      {selectedPayment === 'nowpayments' && <Check style={{ width: 12, height: 12 }} />}
-                    </div>
-                  </div>
-
-                  {/* PayPal */}
-                  <div
-                    onClick={() => setSelectedPayment('paypal')}
-                    className={`zev-gateway-card ${selectedPayment === 'paypal' ? 'selected' : ''}`}
-                  >
-                    <div className="zev-gateway-left">
-                      <div className="zev-gateway-icon-box" style={{ backgroundColor: '#EFF6FF', color: '#0070BA' }}>
-                        <Lock style={{ width: 20, height: 20 }} />
-                      </div>
-                      <div>
-                        <div className="zev-gateway-name">
-                          <span>PayPal International</span>
-                          <span className="zev-instant-badge" style={{ background: '#E0F2FE', color: '#0369A1' }}>OFFICIAL</span>
-                        </div>
-                        <div className="zev-gateway-sub">Fast and secure checkout with your PayPal balance or bank</div>
-                      </div>
-                    </div>
-                    <div className={`zev-gateway-radio ${selectedPayment === 'paypal' ? 'selected' : ''}`}>
-                      {selectedPayment === 'paypal' && <Check style={{ width: 12, height: 12 }} />}
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1259,7 +1353,7 @@ function ZevPayContent() {
                   </div>
                   <div className="zev-security-card-title">Triple Gateway Protection</div>
                   <div className="zev-security-card-desc">
-                    Official partnerships with Stripe, PayPal, and NOWPayments ensure 100% buyer protection and chargeback safety.
+                    Official bank-grade security with Visa, Mastercard, PayPal, and leading blockchain networks ensure 100% buyer protection and chargeback safety.
                   </div>
                 </div>
               </div>
@@ -1584,7 +1678,7 @@ function ZevPayContent() {
               ) : (
                 <>
                   <Lock style={{ width: 15, height: 15 }} />
-                  <span>Pay ${effectivePrice.toFixed(2)} via {selectedPayment === 'stripe' ? 'Stripe' : selectedPayment === 'nowpayments' ? 'Crypto' : 'PayPal'}</span>
+                  <span>Pay ${effectivePrice.toFixed(2)} with {getPaymentLabel(selectedPayment)}</span>
                   <ArrowRight style={{ width: 15, height: 15 }} />
                 </>
               )}

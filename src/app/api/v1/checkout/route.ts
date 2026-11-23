@@ -40,8 +40,12 @@ export async function POST(req: NextRequest) {
     const returnUrl = `${origin}/?status=success&orderId=${orderId}&uid=${target_user_id}&coins=${coins}`;
     const cancelUrl = `${origin}/?status=cancelled&uid=${target_user_id}`;
 
-    // 1. STRIPE CHECKOUT (Cards, Apple Pay, Google Pay)
-    if (gateway === 'stripe') {
+    // 1. CARDS & WALLETS (Debit & Credit Card, Apple Pay, Google Pay, Samsung Pay, Amazon Pay)
+    const isCardOrWallet = ['stripe', 'card', 'cards', 'apple_pay', 'applepay', 'google_pay', 'googlepay', 'samsung_pay', 'samsungpay', 'amazon_pay', 'amazonpay', 'link'].includes(gateway);
+    const isCrypto = ['nowpayments', 'crypto', 'cryptocurrency', 'usdt', 'btc'].includes(gateway);
+    const isPayPal = ['paypal'].includes(gateway);
+
+    if (isCardOrWallet) {
       const stripeKey = process.env.STRIPE_SECRET_KEY;
       if (!stripeKey) {
         return NextResponse.json({ success: false, error: 'Stripe configuration missing on server.' }, { status: 500 });
@@ -84,11 +88,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: session.error?.message || 'Stripe initialization failed.' }, { status: 500 });
     }
 
-    // 2. NOWPAYMENTS (Crypto: USDT TRC-20, BTC, ETH, TON, Solana)
-    if (gateway === 'nowpayments') {
+    // 2. CRYPTO CURRENCY (USDT TRC-20, BTC, ETH, TON, Solana & 100+ coins)
+    if (isCrypto) {
       const apiKey = process.env.NOWPAYMENTS_API_KEY;
       if (!apiKey) {
-        return NextResponse.json({ success: false, error: 'NOWPayments configuration missing on server.' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Crypto payment configuration missing on server.' }, { status: 500 });
       }
 
       const invoiceRes = await fetch('https://api.nowpayments.io/v1/invoice', {
@@ -122,7 +126,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. PAYPAL (Instant Pay & Pay in 4)
-    if (gateway === 'paypal') {
+    if (isPayPal) {
       const clientId = process.env.PAYPAL_CLIENT_ID;
       const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
       const isLive = process.env.PAYPAL_MODE === 'live';
