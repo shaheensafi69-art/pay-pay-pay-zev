@@ -494,7 +494,13 @@ function ZevPayContent() {
   async function handleProceedToPayment() {
     if (!profile) {
       setActiveTab('recharge');
-      alert('Please search for and select a target ZEV account first.');
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 100, behavior: 'smooth' });
+        setTimeout(() => {
+          const input = document.querySelector('.zev-search-input') as HTMLInputElement | null;
+          if (input) input.focus();
+        }, 150);
+      }
       return;
     }
 
@@ -1626,7 +1632,7 @@ function ZevPayContent() {
 
             <button
               onClick={handleProceedToPayment}
-              disabled={isProcessing || !profile}
+              disabled={isProcessing}
               className="zev-checkout-btn"
             >
               {isProcessing ? (
