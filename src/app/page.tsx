@@ -494,21 +494,26 @@ function ZevPayContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          target_user_id: profile.id,
           userId: profile.id,
+          target_username: profile.username,
           username: profile.username,
           coins: effectiveCoins,
+          usd_amount: Number(effectivePrice.toFixed(2)),
           usdAmount: Number(effectivePrice.toFixed(2)),
+          gateway: selectedPayment,
           paymentMethod: selectedPayment,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!res.ok || (!data.success && !data.redirectUrl && !data.redirect_url)) {
         throw new Error(data.error || 'Failed to initialize payment.');
       }
 
-      if (data.redirectUrl) {
-        window.location.href = data.redirectUrl;
+      const redirect = data.redirectUrl || data.redirect_url;
+      if (redirect) {
+        window.location.href = redirect;
       } else {
         throw new Error('No redirect URL returned by gateway.');
       }

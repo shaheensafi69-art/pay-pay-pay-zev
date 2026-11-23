@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { notifyCoinPurchaseTelegram } from './telegram';
 
 let cachedAdminClient: SupabaseClient | null = null;
 const processedTransactions = new Set<string>();
@@ -80,8 +81,8 @@ export async function creditUserCoins(
     }
 
     // 3. Automatically record purchase transaction under recipient user
+    const usdAmount = options?.usdAmount ?? (coinsToAdd * 0.01414);
     try {
-      const usdAmount = options?.usdAmount ?? (coinsToAdd * 0.01414);
       await supabase.from('coin_purchases').insert({
         user_id: targetUserId,
         coins_amount: coinsToAdd,
@@ -94,6 +95,21 @@ export async function creditUserCoins(
       });
     } catch (insertErr) {
       console.warn('[TRANSACTION RECORD EXCEPTION]', insertErr);
+    }
+
+    // 4. Send Instant Telegram Bot Notification to Admins
+    try {
+      await notifyCoinPurchaseTelegram({
+        targetUsername: profile.username,
+        targetUserId,
+        coins: coinsToAdd,
+        usdAmount,
+        gateway,
+        orderId: orderId || `order_${Date.now()}`,
+        buyerUsername: options?.metadata?.target_username || options?.metadata?.buyer_username,
+      });
+    } catch (tgErr) {
+      console.warn('[TELEGRAM NOTIFY EXCEPTION]', tgErr);
     }
 
     if (orderId) {

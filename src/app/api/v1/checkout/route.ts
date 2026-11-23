@@ -3,11 +3,31 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { target_user_id, target_username, coins, usd_amount, gateway } = body;
 
-    if (!target_user_id || !coins || !usd_amount || !gateway) {
+    // Support both snake_case and camelCase for maximum compatibility
+    const target_user_id = (body.target_user_id || body.userId || body.targetUserId || '').toString().trim();
+    const target_username = (body.target_username || body.username || body.targetUsername || '').toString().trim();
+    const coins = parseInt(body.coins || body.coins_amount || body.coinsAmount || '0', 10);
+    const usd_amount = parseFloat(body.usd_amount || body.usdAmount || body.amount || '0');
+    const gateway = (body.gateway || body.paymentMethod || body.payment_gateway || 'stripe').toString().toLowerCase().trim();
+
+    if (!target_user_id) {
       return NextResponse.json(
-        { error: 'Missing required parameters (target_user_id, coins, usd_amount, gateway).' },
+        { success: false, error: 'Please search and select a recipient ZEV account first.' },
+        { status: 400 }
+      );
+    }
+
+    if (!coins || coins <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'Please select a valid coin package or amount.' },
+        { status: 400 }
+      );
+    }
+
+    if (!usd_amount || usd_amount <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid payment amount specified.' },
         { status: 400 }
       );
     }
@@ -24,7 +44,7 @@ export async function POST(req: NextRequest) {
     if (gateway === 'stripe') {
       const stripeKey = process.env.STRIPE_SECRET_KEY;
       if (!stripeKey) {
-        return NextResponse.json({ error: 'Stripe configuration missing.' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Stripe configuration missing on server.' }, { status: 500 });
       }
 
       const params = new URLSearchParams();
@@ -53,16 +73,22 @@ export async function POST(req: NextRequest) {
 
       const session = await stripeRes.json();
       if (session.url) {
-        return NextResponse.json({ redirect_url: session.url, order_id: orderId });
+        return NextResponse.json({
+          success: true,
+          redirect_url: session.url,
+          redirectUrl: session.url,
+          order_id: orderId,
+          orderId: orderId,
+        });
       }
-      return NextResponse.json({ error: session.error?.message || 'Stripe initialization failed.' }, { status: 500 });
+      return NextResponse.json({ success: false, error: session.error?.message || 'Stripe initialization failed.' }, { status: 500 });
     }
 
     // 2. NOWPAYMENTS (Crypto: USDT TRC-20, BTC, ETH, TON, Solana)
     if (gateway === 'nowpayments') {
       const apiKey = process.env.NOWPAYMENTS_API_KEY;
       if (!apiKey) {
-        return NextResponse.json({ error: 'NOWPayments configuration missing.' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'NOWPayments configuration missing on server.' }, { status: 500 });
       }
 
       const invoiceRes = await fetch('https://api.nowpayments.io/v1/invoice', {
@@ -84,9 +110,15 @@ export async function POST(req: NextRequest) {
 
       const invoice = await invoiceRes.json();
       if (invoice.invoice_url) {
-        return NextResponse.json({ redirect_url: invoice.invoice_url, order_id: orderId });
+        return NextResponse.json({
+          success: true,
+          redirect_url: invoice.invoice_url,
+          redirectUrl: invoice.invoice_url,
+          order_id: orderId,
+          orderId: orderId,
+        });
       }
-      return NextResponse.json({ error: invoice.message || 'NOWPayments initialization failed.' }, { status: 500 });
+      return NextResponse.json({ success: false, error: invoice.message || 'NOWPayments initialization failed.' }, { status: 500 });
     }
 
     // 3. PAYPAL (Instant Pay & Pay in 4)
@@ -96,7 +128,7 @@ export async function POST(req: NextRequest) {
       const isLive = process.env.PAYPAL_MODE === 'live';
 
       if (!clientId || !clientSecret) {
-        return NextResponse.json({ error: 'PayPal credentials missing.' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'PayPal credentials missing on server.' }, { status: 500 });
       }
 
       const baseUrl = isLive ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
@@ -115,7 +147,7 @@ export async function POST(req: NextRequest) {
       const tokenData = await tokenRes.json();
       const accessToken = tokenData.access_token;
       if (!accessToken) {
-        return NextResponse.json({ error: 'PayPal authorization failed.' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'PayPal authorization failed.' }, { status: 500 });
       }
 
       // 2. Create Order
@@ -152,14 +184,20 @@ export async function POST(req: NextRequest) {
       const approveLink = orderData.links?.find((l: any) => l.rel === 'approve')?.href;
 
       if (approveLink) {
-        return NextResponse.json({ redirect_url: approveLink, order_id: orderId });
+        return NextResponse.json({
+          success: true,
+          redirect_url: approveLink,
+          redirectUrl: approveLink,
+          order_id: orderId,
+          orderId: orderId,
+        });
       }
-      return NextResponse.json({ error: 'Failed to create PayPal approval link.' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'Failed to create PayPal approval link.' }, { status: 500 });
     }
 
-    return NextResponse.json({ error: 'Unsupported gateway' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Unsupported payment gateway.' }, { status: 400 });
   } catch (err: any) {
     console.error('Checkout error:', err);
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: err.message || 'Internal server error' }, { status: 500 });
   }
 }
