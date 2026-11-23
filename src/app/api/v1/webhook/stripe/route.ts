@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     const event = JSON.parse(rawBody);
 
-    // 2. Only credit when checkout session is completed AND fully paid
+    // 2. Handle Stripe Checkout Session completed
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
 
@@ -53,10 +53,39 @@ export async function POST(req: NextRequest) {
       if (targetUserId && coinsToAdd > 0) {
         const usdAmount = session.amount_total ? session.amount_total / 100 : undefined;
         const buyerUserId = session.metadata?.buyer_user_id || null;
-        const result = await creditUserCoins(targetUserId, coinsToAdd, 'Stripe', orderId, {
+        const result = await creditUserCoins(targetUserId, coinsToAdd, 'Stripe Checkout', orderId, {
           usdAmount,
           buyerUserId,
           metadata: session.metadata,
+        });
+        if (result.success) {
+          return NextResponse.json({ received: true, credited: true, newBalance: result.newBalance });
+        }
+        return NextResponse.json({ received: true, credited: false, error: result.error });
+      }
+    }
+
+    // 3. Handle Stripe PaymentIntent succeeded (used by Express Checkout: Apple Pay, Google Pay, Link, Amazon Pay)
+    if (event.type === 'payment_intent.succeeded') {
+      const pi = event.data.object;
+
+      if (pi.status !== 'succeeded') {
+        console.warn(`[Stripe Webhook] PaymentIntent received but status is '${pi.status}'. No coins credited.`);
+        return NextResponse.json({ received: true, credited: false });
+      }
+
+      const targetUserId = pi.metadata?.target_user_id;
+      const coinsToAdd = parseInt(pi.metadata?.coins || '0', 10);
+      const orderId = pi.metadata?.order_id || pi.id;
+
+      if (targetUserId && coinsToAdd > 0) {
+        const usdAmount = pi.amount ? pi.amount / 100 : undefined;
+        const buyerUserId = pi.metadata?.buyer_user_id || null;
+        const gatewayLabel = pi.metadata?.gateway || 'Stripe One-Click (Apple/Google Pay)';
+        const result = await creditUserCoins(targetUserId, coinsToAdd, gatewayLabel, orderId, {
+          usdAmount,
+          buyerUserId,
+          metadata: pi.metadata,
         });
         if (result.success) {
           return NextResponse.json({ received: true, credited: true, newBalance: result.newBalance });

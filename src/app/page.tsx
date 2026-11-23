@@ -38,6 +38,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import StripeExpressCheckout from '@/components/StripeExpressCheckout';
 
 interface UserProfile {
   id: string;
@@ -1096,6 +1097,31 @@ function ZevPayContent() {
 
               {/* 3. Payment Method Section */}
               <div style={{ marginBottom: 30 }}>
+                {/* Stripe Express One-Click Checkout (Apple Pay, Google Pay, Link, Amazon Pay) */}
+                <StripeExpressCheckout
+                  amount={effectivePrice}
+                  coins={effectiveCoins}
+                  targetUser={
+                    profile
+                      ? {
+                          id: profile.id,
+                          username: profile.username,
+                          full_name: profile.first_name
+                            ? `${profile.first_name} ${profile.last_name || ''}`.trim()
+                            : undefined,
+                        }
+                      : null
+                  }
+                  onPaymentStart={() => setIsProcessing(true)}
+                  onPaymentError={(err) => {
+                    setIsProcessing(false);
+                    alert(err);
+                  }}
+                  onPaymentSuccess={() => {
+                    setIsProcessing(false);
+                  }}
+                />
+
                 <div className="zev-section-title">
                   <CreditCard style={{ width: 15, height: 15, color: '#536DFE' }} />
                   <span>Select Payment Gateway</span>
